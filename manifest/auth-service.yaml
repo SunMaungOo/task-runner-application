@@ -1,0 +1,75 @@
+apiVersion: v1 
+kind: ConfigMap
+metadata:
+  name: auth-cm
+  namespace: task-runner 
+data:
+  AUTH_DB: "auth-db"
+
+---
+
+apiVersion: v1 
+kind: Service 
+metadata:
+  name: auth-mongodb-svc
+  namespace: task-runner
+spec:
+  clusterIP: None
+  selector:
+    app: auth-mongodb
+  ports:
+    - port: 27017
+      name: mongodb-default-port
+            
+---
+
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: auth-mongodb
+  namespace: task-runner
+spec:
+  serviceName: auth-mongodb-svc
+  selector:
+    matchLabels:
+      app: auth-mongodb
+  replicas: 2 
+  template:
+    metadata:
+      labels:
+        app: auth-mongodb
+    spec:
+      containers:
+        - name: auth-mongodb
+          image: mongo:7.0
+          volumeMounts:
+            - name: mongodb-data
+              mountPath: /data/db
+          env:
+            - name: MONGO_INITDB_DATABASE
+              valueFrom:
+                configMapKeyRef:
+                  name: auth-cm
+                  key: AUTH_DB
+
+            - name: MONGO_INITDB_ROOT_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: auth-mongodb
+                  key: MONGO_INITDB_ROOT_USERNAME
+
+            - name: MONGO_INITDB_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: auth-mongodb
+                  key: MONGO_INITDB_ROOT_PASSWORD
+          
+  volumeClaimTemplates:
+    - metadata:
+        name: mongodb-data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        storageClassName: local-path
+        resources:
+          requests:
+            storage: 200M
