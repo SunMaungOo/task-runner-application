@@ -107,8 +107,9 @@ spec:
         - name: auth
           image: task-runner-auth:afe74b4
           livenessProbe:
-            httpGet: /healthz
-            port: 8080
+            httpGet: 
+              path: /healthz
+              port: 8080
           initialDelaySeconds: 5
           periodSeconds: 10
       
@@ -120,9 +121,6 @@ spec:
             periodSeconds: 5
 
           env:
-            - name: MONGO_URI
-              value: "mongodb://$(MONGO_INITDB_ROOT_USERNAME):$(MONGO_INITDB_ROOT_PASSWORD)@auth-mongodb-svc:27017/authdb?authSource=admin&replicaSet=rs0"
-
             - name: MONGO_INITDB_DATABASE
               valueFrom:
                 configMapKeyRef:
@@ -141,9 +139,14 @@ spec:
                   name: auth-mongodb
                   key: MONGO_INITDB_ROOT_PASSWORD
 
+            - name: MONGO_URI
+              value: "mongodb://$(MONGO_INITDB_ROOT_USERNAME):$(MONGO_INITDB_ROOT_PASSWORD)@auth-mongodb-svc:27017/authdb?authSource=admin&replicaSet=rs0"
+
             - name: JWT_SECRET
               valueFrom:
                 secretKeyRef:
                   name: auth-svc
                   key: JWT_SECRET
+
+            
 
