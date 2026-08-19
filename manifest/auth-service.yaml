@@ -51,7 +51,7 @@ spec:
           image: mongo:7.0
           # make it the part of the cluster
           command: ["mongod"]
-          args: ["--replSet","rs0","--bind_up_all"]
+          args: ["--replSet","rs0","--bind_ip_all"]
           volumeMounts:
             - name: mongodb-data
               mountPath: /data/db
