@@ -140,7 +140,7 @@ spec:
                   key: MONGO_INITDB_ROOT_PASSWORD
 
             - name: MONGO_URI
-              value: "mongodb://$(MONGO_INITDB_ROOT_USERNAME):$(MONGO_INITDB_ROOT_PASSWORD)@auth-mongodb-svc:27017/authdb?authSource=admin&replicaSet=rs0"
+              value: "mongodb://$(MONGO_INITDB_ROOT_USERNAME):$(MONGO_INITDB_ROOT_PASSWORD)@auth-mongodb-0.auth-mongodb-svc.task-runner.svc.cluster.local:27017,auth-mongodb-1.auth-mongodb-svc.task-runner.svc.cluster.local:27017/$(MONGO_INITDB_DATABASE)?authSource=admin&replicaSet=rs0"
 
             - name: JWT_SECRET
               valueFrom:
