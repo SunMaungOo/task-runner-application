@@ -4,7 +4,7 @@ metadata:
   name: auth-cm
   namespace: task-runner
   annotations:
-    argocd.argoproj.io/sync-wave: 1 
+    argocd.argoproj.io/sync-wave: "1" 
 data:
   AUTH_DB: "auth-db"
 
@@ -16,7 +16,7 @@ metadata:
   name: auth-mongodb-svc
   namespace: task-runner
   annotations:
-    argocd.argoproj.io/sync-wave: 2
+    argocd.argoproj.io/sync-wave: "2"
 spec:
   clusterIP: None
   selector:
@@ -33,7 +33,7 @@ metadata:
   name: auth-mongodb
   namespace: task-runner
   annotations:
-    argocd.argoproj.io/sync-wave: 3
+    argocd.argoproj.io/sync-wave: "3"
 spec:
   serviceName: auth-mongodb-svc
   selector:
