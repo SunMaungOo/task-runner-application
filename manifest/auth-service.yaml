@@ -105,7 +105,7 @@ spec:
     spec:
       containers:
         - name: auth
-          image: task-runner-auth:afe74b4
+          image: sunmaungoo/task-runner-auth:afe74b4
           livenessProbe:
             httpGet: 
               path: /healthz
