@@ -114,7 +114,7 @@ spec:
             postStart:
               exec:
                 command: ["/bin/bash", "/scripts/init-rs.sh"]
-      volume:
+      volumes:
         - name: script-volume
           configMap:
             name: auth-cm
