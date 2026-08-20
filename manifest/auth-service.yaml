@@ -90,7 +90,7 @@ spec:
               mountPath: /data/db
         
             - name: script-volume
-              mountPath: /scripts/init-rs.sh
+              mountPath: /docker-entrypoint-initdb.d/init-rs.sh
               subPath: init-rs.sh
           env:
             - name: MONGO_INITDB_DATABASE
@@ -110,10 +110,6 @@ spec:
                 secretKeyRef:
                   name: auth-mongodb
                   key: MONGO_INITDB_ROOT_PASSWORD
-          lifecycle:
-            postStart:
-              exec:
-                command: ["/bin/bash", "/scripts/init-rs.sh"]
       volumes:
         - name: script-volume
           configMap:
