@@ -7,6 +7,39 @@ metadata:
     argocd.argoproj.io/sync-wave: "1" 
 data:
   AUTH_DB: "auth-db"
+  init-rs.sh: |
+    #!/bin/bash
+    if [[ "$(hostname)" == "auth-mongodb-0" ]]; then
+      echo "Waiting for local mongo instance to fully boot up..."
+      until mongosh --eval "db.adminCommand('ping')" &>/dev/null; do 
+        sleep 2
+      done
+      
+      echo "Initiating replica set..."
+      mongosh --username "$MONGO_INITDB_ROOT_USERNAME" --password "$MONGO_INITDB_ROOT_PASSWORD" --authenticationDatabase admin --eval "
+        try {
+          if (!rs.status().ok) {
+            rs.initiate({
+              _id: 'rs0',
+              members: [
+                { _id: 0, host: 'auth-mongodb-0.auth-mongodb-svc.task-runner.svc.cluster.local:27017' },
+                { _id: 1, host: 'auth-mongodb-1.auth-mongodb-svc.task-runner.svc.cluster.local:27017' }
+              ]
+            });
+          }
+        } catch(e) {
+          rs.initiate({
+            _id: 'rs0',
+            members: [
+              { _id: 0, host: 'auth-mongodb-0.auth-mongodb-svc.task-runner.svc.cluster.local:27017' },
+              { _id: 1, host: 'auth-mongodb-1.auth-mongodb-svc.task-runner.svc.cluster.local:27017' }
+            ]
+          });
+        }
+      "
+    else
+      echo "Not auth-mongodb-0, skipping replica set initialization."
+    fi
 
 
 ---
@@ -55,6 +88,10 @@ spec:
           volumeMounts:
             - name: mongodb-data
               mountPath: /data/db
+        
+            - name: script-volume
+              mountPath: /scripts/init-rs.sh
+              subPath: init-rs.sh
           env:
             - name: MONGO_INITDB_DATABASE
               valueFrom:
@@ -73,6 +110,19 @@ spec:
                 secretKeyRef:
                   name: auth-mongodb
                   key: MONGO_INITDB_ROOT_PASSWORD
+          lifecycle:
+            postStart:
+              exec:
+                command: ["/bin/bash", "/scripts/init-rs.sh"]
+      volume:
+        - name: script-volume
+          configMap:
+            name: auth-cm
+            items:
+              - key: init-rs.sh
+                path: init-rs.sh
+            
+            
           
   volumeClaimTemplates:
     - metadata:
