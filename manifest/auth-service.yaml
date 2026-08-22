@@ -7,40 +7,6 @@ metadata:
     argocd.argoproj.io/sync-wave: "1" 
 data:
   AUTH_DB: "auth-db"
-  init-rs.sh: |
-    #!/bin/bash
-    if [[ "$(hostname)" == "auth-mongodb-0" ]]; then
-      echo "Waiting for local mongo instance to fully boot up..."
-      until mongosh --eval "db.adminCommand('ping')" &>/dev/null; do 
-        sleep 2
-      done
-      
-      echo "Initiating replica set..."
-      mongosh --username "$MONGO_INITDB_ROOT_USERNAME" --password "$MONGO_INITDB_ROOT_PASSWORD" --authenticationDatabase admin --eval "
-        try {
-          if (!rs.status().ok) {
-            rs.initiate({
-              _id: 'rs0',
-              members: [
-                { _id: 0, host: 'auth-mongodb-0.auth-mongodb-svc.task-runner.svc.cluster.local:27017' },
-                { _id: 1, host: 'auth-mongodb-1.auth-mongodb-svc.task-runner.svc.cluster.local:27017' }
-              ]
-            });
-          }
-        } catch(e) {
-          rs.initiate({
-            _id: 'rs0',
-            members: [
-              { _id: 0, host: 'auth-mongodb-0.auth-mongodb-svc.task-runner.svc.cluster.local:27017' },
-              { _id: 1, host: 'auth-mongodb-1.auth-mongodb-svc.task-runner.svc.cluster.local:27017' }
-            ]
-          });
-        }
-      "
-    else
-      echo "Not auth-mongodb-0, skipping replica set initialization."
-    fi
-
 
 ---
 
@@ -88,10 +54,6 @@ spec:
           volumeMounts:
             - name: mongodb-data
               mountPath: /data/db
-        
-            - name: script-volume
-              mountPath: /docker-entrypoint-initdb.d/init-rs.sh
-              subPath: init-rs.sh
           env:
             - name: MONGO_INITDB_DATABASE
               valueFrom:
@@ -110,16 +72,8 @@ spec:
                 secretKeyRef:
                   name: auth-mongodb
                   key: MONGO_INITDB_ROOT_PASSWORD
-      volumes:
-        - name: script-volume
-          configMap:
-            name: auth-cm
-            items:
-              - key: init-rs.sh
-                path: init-rs.sh
             
-            
-          
+                     
   volumeClaimTemplates:
     - metadata:
         name: mongodb-data
@@ -132,67 +86,32 @@ spec:
 
 ---
 
-apiVersion: apps/v1
-kind: Deployment
+apiVersion: batch/v1
+kind: Job
 metadata:
-  name: auth
+  name: mongodb-init
   namespace: task-runner
   annotations:
     argocd.argoproj.io/sync-wave: "4"
 spec:
-  replicas: 2 
-  selector:
-    matchLabels:
-      app: auth
   template:
-    metadata:
-      labels:
-        app: auth
     spec:
+      restartPolicy: OnFailure
       containers:
-        - name: auth
-          image: sunmaungoo/task-runner-auth:afe74b4
-          livenessProbe:
-            httpGet: 
-              path: /healthz
-              port: 8080
-            initialDelaySeconds: 5
-            periodSeconds: 10
-      
-          readinessProbe:
-            httpGet:
-              path: /readyz
-              port: 8080
-            initialDelaySeconds: 5
-            periodSeconds: 5
-
-          env:
-            - name: MONGO_INITDB_DATABASE
-              valueFrom:
-                configMapKeyRef:
-                  name: auth-cm
-                  key: AUTH_DB
-
-            - name: MONGO_INITDB_ROOT_USERNAME
-              valueFrom:
-                secretKeyRef:
-                  name: auth-mongodb
-                  key: MONGO_INITDB_ROOT_USERNAME
-
-            - name: MONGO_INITDB_ROOT_PASSWORD
-              valueFrom:
-                secretKeyRef:
-                  name: auth-mongodb
-                  key: MONGO_INITDB_ROOT_PASSWORD
-
-            - name: MONGO_URI
-              value: "mongodb://$(MONGO_INITDB_ROOT_USERNAME):$(MONGO_INITDB_ROOT_PASSWORD)@auth-mongodb-0.auth-mongodb-svc.task-runner.svc.cluster.local:27017,auth-mongodb-1.auth-mongodb-svc.task-runner.svc.cluster.local:27017/$(MONGO_INITDB_DATABASE)?authSource=admin&replicaSet=rs0"
-
-            - name: JWT_SECRET
-              valueFrom:
-                secretKeyRef:
-                  name: auth-svc
-                  key: JWT_SECRET
-
+      - name: mongo-init
+        image: mongo:7.0
+        command:
+        - mongosh
+        - --host
+        - auth-mongodb-0.auth-mongodb-svc.task-runner.svc.cluster.local:27017
+        - --eval
+        - |
+          rs.initiate({
+            _id: "rs0",
+            members: [
+              { _id: 0, host: 'auth-mongodb-0.auth-mongodb-svc.task-runner.svc.cluster.local:27017' },
+              { _id: 1, host: 'auth-mongodb-1.auth-mongodb-svc.task-runner.svc.cluster.local:27017' }
+            ]
+          })
             
 
