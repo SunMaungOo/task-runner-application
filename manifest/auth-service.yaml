@@ -75,6 +75,8 @@ spec:
           livenessProbe:
               exec:
                 command:
+                  - sh
+                  - -c
                   - mongosh
                   - --username
                   - "$MONGO_INITDB_ROOT_USERNAME"
@@ -90,6 +92,8 @@ spec:
           readinessProbe:
               exec:
                 command:
+                  - sh 
+                  - -c
                   - mongosh
                   - --username
                   - "$MONGO_INITDB_ROOT_USERNAME"
