@@ -54,30 +54,12 @@ spec:
           volumeMounts:
             - name: mongodb-data
               mountPath: /data/db
-          env:
-            - name: MONGO_INITDB_DATABASE
-              valueFrom:
-                configMapKeyRef:
-                  name: auth-cm
-                  key: AUTH_DB
-
-            - name: MONGO_INITDB_ROOT_USERNAME
-              valueFrom:
-                secretKeyRef:
-                  name: auth-mongodb
-                  key: MONGO_INITDB_ROOT_USERNAME
-
-            - name: MONGO_INITDB_ROOT_PASSWORD
-              valueFrom:
-                secretKeyRef:
-                  name: auth-mongodb
-                  key: MONGO_INITDB_ROOT_PASSWORD
           livenessProbe:
               exec:
                 command:
                   - sh
                   - -c
-                  - 'mongosh --username "$MONGO_INITDB_ROOT_USERNAME" --password "$MONGO_INITDB_ROOT_PASSWORD" --authenticationDatabase admin --eval "db.runCommand({ping:1})"'
+                  - 'mongosh --eval "db.runCommand({ping:1})"'
               periodSeconds: 10
               timeoutSeconds: 5
           readinessProbe:
@@ -85,7 +67,7 @@ spec:
                 command:
                   - sh 
                   - -c
-                  - 'mongosh --username "$MONGO_INITDB_ROOT_USERNAME" --password "$MONGO_INITDB_ROOT_PASSWORD" --authenticationDatabase admin --eval "db.runCommand({hello:1})"'
+                  - 'mongosh --eval "db.runCommand({hello:1})"'
               initialDelaySeconds: 15
               periodSeconds: 10
               timeoutSeconds: 5
@@ -132,24 +114,45 @@ spec:
           - bash 
           - -c
           - |
-            until mongosh --host auth-mongodb-0.auth-mongodb-svc.task-runner.svc.cluster.local:27017 -u "$MONGO_INITDB_ROOT_USERNAME" -p "$MONGO_INITDB_ROOT_PASSWORD" --authenticationDatabase admin --eval "db.runCommand({ping:1})" &>/dev/null; do
+
+            HOST0="auth-mongodb-0.auth-mongodb-svc.task-runner.svc.cluster.local:27017"
+
+            HOST1="auth-mongodb-1.auth-mongodb-svc.task-runner.svc.cluster.local:27017"
+            
+            until mongosh --host "$HOST0" --eval "db.runCommand({ping:1})" &>/dev/null; do
               echo "Waiting for auth-mongodb-0 to accept authorized traffic..."
               sleep 3
             done
 
-            until mongosh --host auth-mongodb-1.auth-mongodb-svc.task-runner.svc.cluster.local:27017 -u "$MONGO_INITDB_ROOT_USERNAME" -p "$MONGO_INITDB_ROOT_PASSWORD" --authenticationDatabase admin --eval "db.runCommand({ping:1})" &>/dev/null; do
+            until mongosh --host "$HOST1" --eval "db.runCommand({ping:1})" &>/dev/null; do
               echo "Waiting for auth-mongodb-1 to accept authorized traffic..."
               sleep 3
             done
 
-            mongosh --host auth-mongodb-0.auth-mongodb-svc.task-runner.svc.cluster.local:27017 -u "$MONGO_INITDB_ROOT_USERNAME" -p "$MONGO_INITDB_ROOT_PASSWORD" --authenticationDatabase admin --eval '
-              rs.initiate({
-                _id: "rs0",
-                members: [
-                  { _id: 0, host: "auth-mongodb-0.auth-mongodb-svc.task-runner.svc.cluster.local:27017" },
-                  { _id: 1, host: "auth-mongodb-1.auth-mongodb-svc.task-runner.svc.cluster.local:27017" }
-                ]
-              })
+            if ! mongosh --host "$HOST0" --quiet --eval "rs.status()" &>/dev/null; then
+
+              mongosh --host "$HOST0" --eval " 
+
+                rs.initiate({_id:"rs0",members:[{_id:0,host:"$HOST0"},{_id:1,host:"$HOST1"}]})
+
+              "
+
+              echo "Waiting for node to become primary..."
+
+              sleep 10
+
+              echo "Creating root administrator user..."
+
+              mongosh --host "$HOST0"" --eval "
+
+                db.getSiblingDB('admin').createUser({user:"$MONGO_INITDB_ROOT_USERNAME","pwd":"$MONGO_INITDB_ROOT_PASSWORD", roles:[{role:'root',db:'admin'}] })
+             
+              "
+
+            else
+              echo "Replica set already initialized." 
+            fi
+            
             '
             
 
