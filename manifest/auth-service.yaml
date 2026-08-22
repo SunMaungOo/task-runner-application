@@ -77,16 +77,7 @@ spec:
                 command:
                   - sh
                   - -c
-                  - mongosh
-                  - --username
-                  - "$MONGO_INITDB_ROOT_USERNAME"
-                  - --password
-                  - "$MONGO_INITDB_ROOT_PASSWORD"
-                  - --authenticationDatabase
-                  - admin
-                  - --eval
-                  - "db.runCommand({ping:1})"
-              initialDelaySeconds: 30
+                  - 'mongosh --username "$MONGO_INITDB_ROOT_USERNAME" --password "$MONGO_INITDB_ROOT_PASSWORD" --authenticationDatabase admin --eval "db.runCommand({ping:1})"'
               periodSeconds: 10
               timeoutSeconds: 5
           readinessProbe:
@@ -94,15 +85,7 @@ spec:
                 command:
                   - sh 
                   - -c
-                  - mongosh
-                  - --username
-                  - "$MONGO_INITDB_ROOT_USERNAME"
-                  - --password
-                  - "$MONGO_INITDB_ROOT_PASSWORD"
-                  - --authenticationDatabase
-                  - admin
-                  - --eval
-                  - "db.runCommand({hello:1})"
+                  - 'mongosh --username "$MONGO_INITDB_ROOT_USERNAME" --password "$MONGO_INITDB_ROOT_PASSWORD" --authenticationDatabase admin --eval "db.runCommand({hello:1})"'
               initialDelaySeconds: 15
               periodSeconds: 10
               timeoutSeconds: 5
