@@ -72,6 +72,36 @@ spec:
                 secretKeyRef:
                   name: auth-mongodb
                   key: MONGO_INITDB_ROOT_PASSWORD
+          livenessProbe:
+              exec:
+                command:
+                  - mongosh
+                  - --username
+                  - "$MONGO_INITDB_ROOT_USERNAME"
+                  - --password
+                  - "$MONGO_INITDB_ROOT_PASSWORD"
+                  - --authenticationDatabase
+                  - admin
+                  - --eval
+                  - "db.runCommand({ping:1})"
+              initialDelaySeconds: 30
+              periodSeconds: 10
+              timeoutSeconds: 5
+          readinessProbe:
+              exec:
+                command:
+                  - mongosh
+                  - --username
+                  - "$MONGO_INITDB_ROOT_USERNAME"
+                  - --password
+                  - "$MONGO_INITDB_ROOT_PASSWORD"
+                  - --authenticationDatabase
+                  - admin
+                  - --eval
+                  - "db.runCommand({hello:1})"
+              initialDelaySeconds: 15
+              periodSeconds: 10
+              timeoutSeconds: 5
             
                      
   volumeClaimTemplates:
@@ -100,18 +130,39 @@ spec:
       containers:
       - name: mongo-init
         image: mongo:7.0
+        env:
+          - name: MONGO_INITDB_ROOT_USERNAME
+            valueFrom:
+              secretKeyRef:
+                name: auth-mongodb
+                key: MONGO_INITDB_ROOT_USERNAME
+          - name: MONGO_INITDB_ROOT_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: auth-mongodb
+                key: MONGO_INITDB_ROOT_PASSWORD
         command:
-        - mongosh
-        - --host
-        - auth-mongodb-0.auth-mongodb-svc.task-runner.svc.cluster.local:27017
-        - --eval
-        - |
-          rs.initiate({
-            _id: "rs0",
-            members: [
-              { _id: 0, host: 'auth-mongodb-0.auth-mongodb-svc.task-runner.svc.cluster.local:27017' },
-              { _id: 1, host: 'auth-mongodb-1.auth-mongodb-svc.task-runner.svc.cluster.local:27017' }
-            ]
-          })
+          - bash 
+          - -c
+          - |
+            until mongosh --host auth-mongodb-0.auth-mongodb-svc.task-runner.svc.cluster.local:27017 -u "$MONGO_INITDB_ROOT_USERNAME" -p "$MONGO_INITDB_ROOT_PASSWORD" --authenticationDatabase admin --eval "db.runCommand({ping:1})" &>/dev/null; do
+              echo "Waiting for auth-mongodb-0 to accept authorized traffic..."
+              sleep 3
+            done
+
+            until mongosh --host auth-mongodb-1.auth-mongodb-svc.task-runner.svc.cluster.local:27017 -u "$MONGO_INITDB_ROOT_USERNAME" -p "$MONGO_INITDB_ROOT_PASSWORD" --authenticationDatabase admin --eval "db.runCommand({ping:1})" &>/dev/null; do
+              echo "Waiting for auth-mongodb-1 to accept authorized traffic..."
+              sleep 3
+            done
+
+            mongosh --host auth-mongodb-0.auth-mongodb-svc.task-runner.svc.cluster.local:27017 -u "$MONGO_INITDB_ROOT_USERNAME" -p "$MONGO_INITDB_ROOT_PASSWORD" --authenticationDatabase admin --eval '
+              rs.initiate({
+                _id: "rs0",
+                members: [
+                  { _id: 0, host: "auth-mongodb-0.auth-mongodb-svc.task-runner.svc.cluster.local:27017" },
+                  { _id: 1, host: "auth-mongodb-1.auth-mongodb-svc.task-runner.svc.cluster.local:27017" }
+                ]
+              })
+            '
             
 
