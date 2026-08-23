@@ -111,7 +111,7 @@ spec:
                 name: auth-mongodb
                 key: MONGO_INITDB_ROOT_PASSWORD
         command:
-          - bash 
+          - sh 
           - -c
           - |
 
@@ -143,11 +143,10 @@ spec:
 
               echo "Creating root administrator user..."
 
-              mongosh --host "$HOST0"" --eval "
-
-                db.getSiblingDB('admin').createUser({user:"$MONGO_INITDB_ROOT_USERNAME","pwd":"$MONGO_INITDB_ROOT_PASSWORD", roles:[{role:'root',db:'admin'}] })
-             
-              "
+              mongosh --host "$HOST0" \
+              --eval 'db.getSiblingDB("admin").createUser({user: process.env.MONGO_USER, pwd: process.env.MONGO_PASSWORD, roles: [{role: "root", db: "admin"}]})' \
+              -u "$MONGO_INITDB_ROOT_USERNAME" \
+              -p "$MONGO_INITDB_ROOT_PASSWORD"
 
             else
               echo "Replica set already initialized." 
