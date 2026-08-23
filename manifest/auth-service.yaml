@@ -133,7 +133,7 @@ spec:
 
               mongosh --host "$HOST0" --eval " 
 
-                rs.initiate({_id:"rs0",members:[{_id:0,host:"$HOST0"},{_id:1,host:"$HOST1"}]})
+                rs.initiate({_id: \"rs0\", members: [{_id: 0, host: \"$HOST0\"}, {_id: 1, host: \"$HOST1\"}]})
 
               "
 
@@ -143,7 +143,7 @@ spec:
 
               echo "Creating root administrator user..."
 
-              mongosh --host "$HOST0" --eval 'db.getSiblingDB("admin").createUser({user:"$MONGO_INITDB_ROOT_USERNAME", pwd:"$MONGO_INITDB_ROOT_PASSWORD", roles: [{role: "root", db: "admin"}]})'
+              mongosh --host "$HOST0" --eval "db.getSiblingDB(\"admin\").createUser({user: \"$MONGO_INITDB_ROOT_USERNAME\", pwd: \"$MONGO_INITDB_ROOT_PASSWORD\", roles: [{role: \"root\", db: \"admin\"}]})"
 
             else
               echo "Replica set already initialized." 
