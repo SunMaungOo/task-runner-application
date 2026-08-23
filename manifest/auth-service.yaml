@@ -149,6 +149,5 @@ spec:
               echo "Replica set already initialized." 
             fi
             
-            '
             
 
