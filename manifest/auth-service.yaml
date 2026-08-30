@@ -74,14 +74,14 @@ spec:
               initialDelaySeconds: 15
               periodSeconds: 10
               timeoutSeconds: 5
-          volumes:
-            - name: keyfile-volume
-              secret:
-                secretName: auth-mongodb
-                defaultMode: 0400
-                items:
-                  - key: MONGO_KEY_FILE_DATA
-                    path: mongodb-keyfile
+      volumes:
+        - name: keyfile-volume
+          secret:
+            secretName: auth-mongodb
+            defaultMode: 0400
+            items:
+              - key: MONGO_KEY_FILE_DATA
+                path: mongodb-keyfile
                      
   volumeClaimTemplates:
     - metadata:
