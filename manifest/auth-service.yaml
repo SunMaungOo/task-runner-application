@@ -49,7 +49,6 @@ spec:
       securityContext:
         runAsUser: 999
         runAsGroup: 999
-        fsGroup: 999
       containers:
         - name: auth-mongodb
           image: mongo:7.0
@@ -59,7 +58,7 @@ spec:
           volumeMounts:
             - name: mongodb-data
               mountPath: /data/db
-            - name: keyfile-volume
+            - name: keyfile
               mountPath: /opt/mongodb/mongodb-keyfile
               subPath: mongodb-keyfile
               readOnly: true
@@ -81,15 +80,37 @@ spec:
               periodSeconds: 10
               timeoutSeconds: 5
 
+        - name: auth-mongodb-init
+          image: mongo:7.0
+          securityContext:
+            runAsUser: 0
+            runAsGroup: 0
+          command: 
+            - sh
+            - -c
+            - | 
+              cp /secret/mongodb-keyfile /keyfile/mongodb-keyfile
+              chown 999:999 /keyfile/mongodb-keyfile
+              chmod 400 /keyfile/mongodb-keyfile
+              ls -ln /keyfile/mongodb-keyfile
+          volumeMounts:
+            - name: keyfile-secret
+              mountPath: /secret
+              readOnly: true
+
+            - name: keyfile
+              mountPath: /keyfile
 
       volumes:
-        - name: keyfile-volume
+        - name: keyfile-secret
           secret:
             secretName: auth-mongodb
             defaultMode: 0400
             items:
               - key: MONGO_KEY_FILE_DATA
                 path: mongodb-keyfile
+        - name: keyfile
+          emptyDir: {}
                      
   volumeClaimTemplates:
     - metadata:
