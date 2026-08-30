@@ -59,7 +59,8 @@ spec:
             - name: mongodb-data
               mountPath: /data/db
             - name: keyfile-volume
-              mountPath: /opt/mongodb
+              mountPath: /opt/mongodb/mongodb-keyfile
+              subPath: mongodb-keyfile
               readOnly: true
           livenessProbe:
               exec:
