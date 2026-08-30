@@ -10,10 +10,8 @@ data:
   init-mongodb.sh: |
     #!/bin/sh
 
-    set -eu
-
-    HOST0="auth-mongodb-0.auth-mongodb-svc.task-runner.svc.cluster.local:27017"
-    HOST1="auth-mongodb-1.auth-mongodb-svc.task-runner.svc.cluster.local:27017"
+    export HOST0="auth-mongodb-0.auth-mongodb-svc.task-runner.svc.cluster.local:27017"
+    export HOST1="auth-mongodb-1.auth-mongodb-svc.task-runner.svc.cluster.local:27017"
 
     echo "======================================"
     echo "MongoDB initialization"
@@ -23,7 +21,6 @@ data:
 
     until mongosh \
       --host "$HOST0" \
-      --directConnection \
       -u "$MONGO_INITDB_ROOT_USERNAME" \
       -p "$MONGO_INITDB_ROOT_PASSWORD" \
       --authenticationDatabase admin \
@@ -41,7 +38,6 @@ data:
 
     until mongosh \
       --host "$HOST1" \
-      --directConnection \
       -u "$MONGO_INITDB_ROOT_USERNAME" \
       -p "$MONGO_INITDB_ROOT_PASSWORD" \
       --authenticationDatabase admin \
