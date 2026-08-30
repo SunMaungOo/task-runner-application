@@ -7,6 +7,144 @@ metadata:
     argocd.argoproj.io/sync-wave: "1" 
 data:
   AUTH_DB: "auth-db"
+  init-mongodb.sh: |
+    #!/bin/sh
+
+    set -eu
+
+    HOST0="auth-mongodb-0.auth-mongodb-svc.task-runner.svc.cluster.local:27017"
+    HOST1="auth-mongodb-1.auth-mongodb-svc.task-runner.svc.cluster.local:27017"
+
+    echo "======================================"
+    echo "MongoDB initialization"
+    echo "======================================"
+
+    echo "Waiting for MongoDB-0..."
+
+    until mongosh \
+      --host "$HOST0" \
+      --directConnection \
+      -u "$MONGO_INITDB_ROOT_USERNAME" \
+      -p "$MONGO_INITDB_ROOT_PASSWORD" \
+      --authenticationDatabase admin \
+      --quiet \
+      --eval 'db.adminCommand({ping:1})' \
+      >/dev/null 2>&1
+    do
+      echo "MongoDB-0 is not accepting authenticated connections..."
+      sleep 3
+    done
+
+    echo "MongoDB-0 authentication successful."
+
+    echo "Waiting for MongoDB-1..."
+
+    until mongosh \
+      --host "$HOST1" \
+      --directConnection \
+      -u "$MONGO_INITDB_ROOT_USERNAME" \
+      -p "$MONGO_INITDB_ROOT_PASSWORD" \
+      --authenticationDatabase admin \
+      --quiet \
+      --eval 'db.adminCommand({ping:1})' \
+      >/dev/null 2>&1
+    do
+      echo "MongoDB-1 is not accepting authenticated connections..."
+      sleep 3
+    done
+
+    echo "MongoDB-1 authentication successful."
+
+    echo "Checking replica-set status..."
+
+    if mongosh \
+      --host "$HOST0" \
+      --directConnection \
+      -u "$MONGO_INITDB_ROOT_USERNAME" \
+      -p "$MONGO_INITDB_ROOT_PASSWORD" \
+      --authenticationDatabase admin \
+      --quiet \
+      --eval 'rs.status().ok' \
+      >/dev/null 2>&1
+    then
+
+      echo "Replica set is already initialized."
+
+    else
+
+      echo "Replica set is not initialized."
+      echo "Initializing replica set..."
+
+      mongosh \
+        --host "$HOST0" \
+        --directConnection \
+        -u "$MONGO_INITDB_ROOT_USERNAME" \
+        -p "$MONGO_INITDB_ROOT_PASSWORD" \
+        --authenticationDatabase admin \
+        --quiet \
+        --eval "
+          rs.initiate({
+            _id: 'rs0',
+            members: [
+              {
+                _id: 0,
+                host: '$HOST0'
+              },
+              {
+                _id: 1,
+                host: '$HOST1'
+              }
+            ]
+          })
+        "
+
+      echo "Replica-set initialization command completed."
+
+    fi
+
+    echo "Waiting for MongoDB-0 to become PRIMARY..."
+
+    until mongosh \
+      --host "$HOST0" \
+      --directConnection \
+      -u "$MONGO_INITDB_ROOT_USERNAME" \
+      -p "$MONGO_INITDB_ROOT_PASSWORD" \
+      --authenticationDatabase admin \
+      --quiet \
+      --eval 'db.hello().isWritablePrimary' \
+      2>/dev/null |
+      grep -q true
+    do
+      echo "MongoDB-0 is not PRIMARY yet..."
+      sleep 3
+    done
+
+    echo "MongoDB-0 is PRIMARY."
+
+    echo "Replica-set members:"
+
+    mongosh \
+      --host "$HOST0" \
+      --directConnection \
+      -u "$MONGO_INITDB_ROOT_USERNAME" \
+      -p "$MONGO_INITDB_ROOT_PASSWORD" \
+      --authenticationDatabase admin \
+      --quiet \
+      --eval '
+        rs.status().members.forEach(function(member) {
+          print(
+            member.name +
+            " | " +
+            member.stateStr +
+            " | health=" +
+            member.health
+          );
+        });
+      '
+
+    echo "======================================"
+    echo "MongoDB initialization completed."
+    echo "======================================"
 
 ---
 
@@ -165,127 +303,16 @@ spec:
                 name: auth-mongodb
                 key: MONGO_INITDB_ROOT_PASSWORD
         command:
-          - sh 
-          - -c
-          - |
-            set -eu 
-
-            HOST0="auth-mongodb-0.auth-mongodb-svc.task-runner.svc.cluster.local:27017"
-
-            HOST1="auth-mongodb-1.auth-mongodb-svc.task-runner.svc.cluster.local:27017"
-            
-            echo "Waiting for MongoDB-0"
-
-            until mongosh \
-                --host "$HOST0" \
-                --directConnection \
-                -u "$MONGO_INITDB_ROOT_USERNAME" \
-                -p "$MONGO_INITDB_ROOT_PASSWORD" \
-                --authenticationDatabase admin \
-                --quiet \
-                --eval 'db.adminCommand({ping:1})' \
-                >/dev/null 2>&1
-              do
-                echo "MongoDB-0 is not accepting authenticated connections"
-                sleep 3
-              done
-            
-            echo "MongoDB-0 is accepting authenticated connections."
-
-            until mongosh \
-              --host "$HOST1" \
-              --directConnection \
-              -u "$MONGO_INITDB_ROOT_USERNAME" \
-              -p "$MONGO_INITDB_ROOT_PASSWORD" \
-              --authenticationDatabase admin \
-              --quiet \
-              --eval 'db.adminCommand({ping:1})' \
-              >/dev/null 2>&1
-            do
-              echo "MongoDB-1 is not accepting authenticated connections"
-              sleep 3
-            done
-
-            echo "MongoDB-1 is accepting authenticated connections"
-            
-            # check whether replica is not already created
-
-            echo "Checking replica-set status"
-
-            if mongosh \
-                --host "$HOST0" \
-                --directConnection
-                -u "$MONGO_INITDB_ROOT_USERNAME" \
-                -p "$MONGO_INITDB_ROOT_PASSWORD" \
-                --authenticationDatabase admin \
-                --quiet \
-                --eval 'rs.status().ok' \
-                >/dev/null 2>&1
-            then
-              echo "Replica set is already initialized."
-            else
-              echo "Initializing replica set..."
-
-              mongosh \
-                  --host "$HOST0" \
-                  --directConnection \ 
-                  -u "$MONGO_INITDB_ROOT_USERNAME" \
-                  -p "$MONGO_INITDB_ROOT_PASSWORD" \
-                  --authenticationDatabase admin \
-                  --quiet \
-                  --eval "
-                    rs.initiate({
-                      _id: 'rs0',
-                      members: [
-                        {
-                          _id: 0,
-                          host: '$HOST0'
-                        },
-                        {
-                          _id: 1,
-                          host: '$HOST1'
-                        }
-                      ]
-                    })
-                  "
-
-                  echo "Replica-set initialization command completed."
-            fi
-
-            until mongosh \
-                --host "$HOST0" \
-                --directConnection \
-                -u "$MONGO_INITDB_ROOT_USERNAME" \
-                -p "$MONGO_INITDB_ROOT_PASSWORD" \
-                --authenticationDatabase admin \
-                --quiet \
-                --eval 'db.hello().isWritablePrimary' \
-                2>/dev/null |
-                grep -q true
-              do
-                echo "MongoDB-0 is not primary yet..."
-                sleep 3
-              done
-
-            echo "MongoDB-0 is PRIMARY."
-        
-            mongosh \
-                --host "$HOST0" \
-                --directConnection \
-                -u "$MONGO_INITDB_ROOT_USERNAME" \
-                -p "$MONGO_INITDB_ROOT_PASSWORD" \
-                --authenticationDatabase admin \
-                --quiet \
-                --eval '
-                  rs.status().members.forEach(function(member) {
-                    print(
-                      member.name +
-                      " | " +
-                      member.stateStr +
-                      " | " +
-                      member.health
-                    );
-                  });
-                '
-
-            echo "MongoDB initialization completed successfully."
+          - sh
+          - /scripts/init-mongodb.sh
+        volumeMounts:
+          - name: auth-config
+            mountPath: /scripts/init-mongodb.sh
+            subPath: init-mongodb.sh
+            readOnly: true
+      
+      volumes:
+        - name: auth-config
+          configMap:
+            name: auth-cm
+            defaultMode: 0555
