@@ -331,18 +331,21 @@ spec:
       containers:
       - name: myapp
         image: sunmaungoo/task-runner-auth:afe74b4
+        ports:
+          - containerPort: 8080
+            name: http
         livenessProbe:
           httpGet: 
             path: /healthz
-            port: 8080
+            port: http
           initialDelaySeconds: 5
           periodSeconds: 10
         readinessProbe:
             httpGet:
               path: /readyz
-              port: 8080
+              port: http
             initialDelaySeconds: 5
-            periodSeconds: 5
+            periodSeconds: 5        
         env:
           - name: MONGO_INITDB_DATABASE
             valueFrom:
@@ -370,4 +373,22 @@ spec:
               secretKeyRef:
                 name: auth-svc
                 key: JWT_SECRET
+
+---
+
+apiVersion: v1 
+kind: Service 
+metadata:
+  name: auth-svc
+  namespace: task-runner
+  annotations:
+    argocd.argoproj.io/sync-wave: "6"
+spec:
+  type: ClusterIP
+  selector:
+    app: auth
+  ports:
+    - name: auth-port
+      port: 9000
+      targetPort: http
 
