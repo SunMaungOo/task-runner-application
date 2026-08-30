@@ -308,3 +308,66 @@ spec:
           configMap:
             name: auth-cm
             defaultMode: 0555
+
+---
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: auth
+  namespace: task-runner
+  annotations:
+    argocd.argoproj.io/sync-wave: "5"
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: auth
+  template:
+    metadata:
+      labels:
+        app: auth
+    spec:
+      containers:
+      - name: myapp
+        image: sunmaungoo/task-runner-auth:afe74b4
+        livenessProbe:
+          httpGet: 
+            path: /healthz
+            port: 8080
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        readinessProbe:
+            httpGet:
+              path: /readyz
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 5
+        env:
+          - name: MONGO_INITDB_DATABASE
+            valueFrom:
+              configMapKeyRef:
+                name: auth-cm
+                key: AUTH_DB
+
+          - name: MONGO_INITDB_ROOT_USERNAME
+            valueFrom:
+              secretKeyRef:
+                name: auth-mongodb
+                key: MONGO_INITDB_ROOT_USERNAME
+
+          - name: MONGO_INITDB_ROOT_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: auth-mongodb
+                key: MONGO_INITDB_ROOT_PASSWORD
+
+          - name: MONGO_URI
+            value: "mongodb://$(MONGO_INITDB_ROOT_USERNAME):$(MONGO_INITDB_ROOT_PASSWORD)@auth-mongodb-svc:27017/$(MONGO_INITDB_DATABASE)?authSource=admin&replicaSet=rs0"
+
+          - name: JWT_SECRET
+            valueFrom:
+              secretKeyRef:
+                name: auth-svc
+                key: JWT_SECRET
+
