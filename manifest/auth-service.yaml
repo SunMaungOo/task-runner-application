@@ -55,7 +55,6 @@ data:
 
     if mongosh \
       --host "$HOST0" \
-      --directConnection \
       -u "$MONGO_INITDB_ROOT_USERNAME" \
       -p "$MONGO_INITDB_ROOT_PASSWORD" \
       --authenticationDatabase admin \
@@ -73,7 +72,6 @@ data:
 
       mongosh \
         --host "$HOST0" \
-        --directConnection \
         -u "$MONGO_INITDB_ROOT_USERNAME" \
         -p "$MONGO_INITDB_ROOT_PASSWORD" \
         --authenticationDatabase admin \
@@ -102,7 +100,6 @@ data:
 
     until mongosh \
       --host "$HOST0" \
-      --directConnection \
       -u "$MONGO_INITDB_ROOT_USERNAME" \
       -p "$MONGO_INITDB_ROOT_PASSWORD" \
       --authenticationDatabase admin \
@@ -121,7 +118,6 @@ data:
 
     mongosh \
       --host "$HOST0" \
-      --directConnection \
       -u "$MONGO_INITDB_ROOT_USERNAME" \
       -p "$MONGO_INITDB_ROOT_PASSWORD" \
       --authenticationDatabase admin \
