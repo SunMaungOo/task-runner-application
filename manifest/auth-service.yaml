@@ -49,6 +49,7 @@ spec:
       securityContext:
         runAsUser: 999
         runAsGroup: 999
+        fsGroup: 999
       containers:
         - name: auth-mongodb
           image: mongo:7.0
