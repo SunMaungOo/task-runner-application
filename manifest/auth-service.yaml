@@ -59,8 +59,7 @@ spec:
             - name: mongodb-data
               mountPath: /data/db
             - name: keyfile
-              mountPath: /opt/mongodb/mongodb-keyfile
-              subPath: mongodb-keyfile
+              mountPath: /opt/mongodb
               readOnly: true
           livenessProbe:
               exec:
@@ -79,7 +78,7 @@ spec:
               initialDelaySeconds: 15
               periodSeconds: 10
               timeoutSeconds: 5
-
+      initContainers:
         - name: auth-mongodb-init
           image: mongo:7.0
           securityContext:
@@ -99,7 +98,7 @@ spec:
               readOnly: true
 
             - name: keyfile
-              mountPath: /keyfile
+              mountPath: /opt/mongodb
 
       volumes:
         - name: keyfile-secret
