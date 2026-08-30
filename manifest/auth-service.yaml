@@ -50,10 +50,13 @@ spec:
           image: mongo:7.0
           # make it the part of the cluster
           command: ["mongod"]
-          args: ["--replSet","rs0","--bind_ip_all"]
+          args: ["--replSet","rs0","--bind_ip_all","--keyFile","/opt/mongodb/mongodb-keyfile"]
           volumeMounts:
             - name: mongodb-data
               mountPath: /data/db
+            - name: keyfile-volume
+              mountPath: /opt/mongodb
+              readOnly: true
           livenessProbe:
               exec:
                 command:
@@ -71,7 +74,14 @@ spec:
               initialDelaySeconds: 15
               periodSeconds: 10
               timeoutSeconds: 5
-            
+          volumes:
+            - name: keyfile-volume
+              secret:
+                secretName: auth-mongodb
+                defaultMode: 0400
+                items:
+                  - key: MONGO_KEY_FILE_DATA
+                    path: mongodb-keyfile
                      
   volumeClaimTemplates:
     - metadata:

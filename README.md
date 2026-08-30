@@ -5,7 +5,8 @@
 ```
 kubectl create secret generic auth-mongodb -n task-runner \
   --from-literal=MONGO_INITDB_ROOT_USERNAME='<mongodb-user>' \
-  --from-literal=MONGO_INITDB_ROOT_PASSWORD='<mongodb-password>'
+  --from-literal=MONGO_INITDB_ROOT_PASSWORD='<mongodb-password>' \
+  --from-literal=MONGO_KEY_FILE_DATA='<mongodb-keyfile-data>'
 ```
 
 
