@@ -45,9 +45,6 @@ spec:
       labels:
         app: auth-mongodb
     spec:
-      # allow mongodb to read key file
-      securityContext:
-        fsGroup: 999
       containers:
         - name: auth-mongodb
           image: mongo:7.0
@@ -77,6 +74,12 @@ spec:
               initialDelaySeconds: 15
               periodSeconds: 10
               timeoutSeconds: 5
+
+          # allow mongodb to read key file
+          securityContext:
+             runAsUser: 999
+             runAsGroup: 999
+
       volumes:
         - name: keyfile-volume
           secret:
