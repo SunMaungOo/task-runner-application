@@ -302,9 +302,8 @@ spec:
               secretKeyRef:
                 name: auth-mongodb
                 key: MONGO_INITDB_ROOT_PASSWORD
-        command:
-          - sh
-          - /scripts/init-mongodb.sh
+        command: ["sleep"]
+        args: ["infinity"]
         volumeMounts:
           - name: auth-config
             mountPath: /scripts/init-mongodb.sh
