@@ -88,9 +88,13 @@ spec:
             - sh
             - -c
             - | 
-              cp /secret/mongodb-keyfile /keyfile/mongodb-keyfile
+              echo "Copying MongoDB keyfile"
+              cp /secret/mongodb-keyfile /opt/mongodb/mongodb-keyfile
+              echo "Setting ownership"
               chown 999:999 /keyfile/mongodb-keyfile
+              echo "Setting permissions"
               chmod 400 /keyfile/mongodb-keyfile
+              echo "Checking keyfile"
               ls -ln /keyfile/mongodb-keyfile
           volumeMounts:
             - name: keyfile-secret
