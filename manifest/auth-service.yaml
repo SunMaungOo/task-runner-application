@@ -45,6 +45,9 @@ spec:
       labels:
         app: auth-mongodb
     spec:
+      # allow mongodb to read key file
+      securityContext:
+        fsGroup: 999
       containers:
         - name: auth-mongodb
           image: mongo:7.0
